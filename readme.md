@@ -101,7 +101,7 @@ async def main():
         
         tweet_count = 0
         tweets = None
-        QUERY = "(from:MamataOfficial) until:2019-12-31 since:2019-07-01"
+        QUERY = ""
         
         while tweet_count < 50:
             try:
