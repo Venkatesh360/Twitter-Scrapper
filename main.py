@@ -92,7 +92,7 @@ async def main():
         for col in range(1, len(headers) + 1):
             ws.column_dimensions[get_column_letter(col)].auto_size = True
 
-        wb.save("MamataOfficial.xlsx")
+        wb.save("Python.xlsx")
 
     except Exception as e:
         print(f"An error occurred: {e}")
