@@ -1,9 +1,11 @@
 from twikit import Client, TooManyRequests
 import asyncio
 from datetime import datetime
-import csv
-from random import randint
 import traceback
+from random import randint
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+import json
 
 def processTweets(tweets, tweet_count):
     new_count = tweet_count
@@ -32,30 +34,33 @@ def processTweets(tweets, tweet_count):
             'hashtags': legacy_data.get('entities', {}).get('hashtags', []),
             'user_mentions': legacy_data.get('entities', {}).get('user_mentions', []),
             'urls': legacy_data.get('entities', {}).get('urls', []),
-            'media': legacy_data.get('entities', {}).get('media', []),
+            'media': legacy_data.get('entities', {}).get('media', [])
         }
 
         tweet_data_list.append([
             new_count, extracted_data['user_id'], extracted_data['screen_name'], extracted_data['name'],
             extracted_data['tweet_id'], extracted_data['created_at'], extracted_data['full_text'], extracted_data['retweet_count'],
-            extracted_data['favorite_count'], extracted_data['hashtags'], extracted_data['user_mentions'],
-            extracted_data['urls'], extracted_data['media'], extracted_data['conversation_id']
+            extracted_data['favorite_count'], json.dumps(extracted_data['hashtags']), 
+            json.dumps(extracted_data['user_mentions']), json.dumps(extracted_data['urls']), 
+            json.dumps(extracted_data['media']), extracted_data['conversation_id']
         ])
 
     return new_count, tweet_data_list
 
 async def main():
     try:
-        with open("tweets.csv", "w", newline="", encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Index','User Id', 'Screen Name', 'Name', 'Tweet Id','Created At', 'Text', 'Retweet Count', 'Likes', 'Hashtags', 'User Mentions', 'Urls', 'Media', 'Conversation Id'])
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Tweets"
+        headers = ['Index','User Id', 'Screen Name', 'Name', 'Tweet Id','Created At', 'Text', 'Retweet Count', 'Likes', 'Hashtags', 'User Mentions', 'Urls', 'Media', 'Conversation Id']
+        ws.append(headers)
         
         client = Client('en-US')
         client.load_cookies('cookies.json') 
         
         tweet_count = 0
         tweets = None
-        QUERY = ""
+        QUERY = "Python"
         
         while tweet_count < 50:
             try:
@@ -71,16 +76,23 @@ async def main():
                 print(f"{datetime.now()} - Rate limit reached. Waiting for {wait_time} seconds.")
                 await asyncio.sleep(wait_time)
                 continue
+            
+            if not tweets:
+                print(f"{datetime.now()} No more Tweets found")
 
             tweet_count, tweet_data_list = processTweets(tweets, tweet_count)
             
-            with open('tweets.csv', 'a', newline="", encoding='utf-8') as file:
-                writer = csv.writer(file)
-                writer.writerows(tweet_data_list)
+            for tweet_data in tweet_data_list:
+                ws.append(tweet_data)
             
             wait = randint(10, 20)
             print(f"Waiting for {wait} seconds before the next batch...")
             await asyncio.sleep(wait)
+        
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].auto_size = True
+
+        wb.save("MamataOfficial.xlsx")
 
     except Exception as e:
         print(f"An error occurred: {e}")
